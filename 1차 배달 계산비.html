@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>혼합 배달 순마진 계산기 (완성판)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { margin-top: 26px; }
+    label { display: block; margin-top: 10px; }
+    input { padding: 6px; width: 160px; }
+    button { margin-top: 20px; padding: 12px 26px; font-size: 15px; }
+    .result { margin-top: 22px; font-size: 16px; line-height: 1.7; }
+    .highlight { font-size: 20px; font-weight: bold; color: green; }
+  </style>
+</head>
+<body>
+
+<h2>🍕 혼합 배달 순마진 계산기</h2>
+
+<h2>① 월 판매량</h2>
+<label>
+  월 총 판매 판수:
+  <input type="number" id="totalOrders" value="600" min="1">
+</label>
+
+<label>
+  가게배달 비중 (%):
+  <input type="number" id="storeRatio" value="50" min="0" max="100">
+</label>
+
+<h2>② 가게배달 조건</h2>
+<label>
+  평균 편도 거리 (km):
+  <input type="number" id="distance" step="0.1" value="2.25" min="0.1">
+</label>
+
+<label>
+  어려운 지역 평균 추가요금 (원):
+  <input type="number" id="hardFee" value="0" min="0">
+</label>
+
+<h2>③ 월 고정비</h2>
+<label>
+  월세 (원):
+  <input type="number" id="rent" value="880000" min="0">
+</label>
+
+<label>
+  관리·수도 등 고정비 (원):
+  <input type="number" id="fixedCost" value="550000" min="0">
+</label>
+
+<button onclick="calculate()">계산하기</button>
+
+<div class="result" id="output"></div>
+
+<script>
+function calculate() {
+  // 🔒 확정 상수 (네 기준 고정)
+  const PLATFORM_MARGIN = 2460;   // 플랫폼배달 한판 순마진
+  const PLATFORM_DELIVERY = 3730; // 플랫폼 배달비
+  const COST_PER_KM = 120;        // km당 실제 실비
+
+  // 입력값
+  const totalOrders = Math.max(1, parseInt(totalOrdersEl.value));
+  const storeRatioInput = Math.min(100, Math.max(0, parseFloat(storeRatioEl.value)));
+  const storeRatio = storeRatioInput / 100;
+
+  const oneWayKm = Math.max(0.1, parseFloat(distanceEl.value));
+  const hardFee = Math.max(0, parseInt(hardFeeEl.value));
+
+  const rent = Math.max(0, parseInt(rentEl.value));
+  const fixedCost = Math.max(0, parseInt(fixedCostEl.value));
+
+  // 판수 분리
+  const storeOrders = totalOrders * storeRatio;
+  const platformOrders = totalOrders - storeOrders;
+
+  // 🚚 고객 배달비 계산
+  let deliveryFee = 500;
+  if (oneWayKm > 1) {
+    deliveryFee += Math.round((oneWayKm - 1) * 1000);
+  }
+  deliveryFee += hardFee;
+
+  // 가게배달 실비
+  const realDeliveryCost = oneWayKm * 2 * COST_PER_KM;
+
+  // 🍕 가게배달 한판 순마진 (정제된 공식)
+  const storeMargin =
+    PLATFORM_MARGIN +
+    PLATFORM_DELIVERY +
+    deliveryFee -
+    realDeliveryCost;
+
+  // 💰 월 총이익
+  const storeProfit = storeOrders * storeMargin;
+  const platformProfit = platformOrders * PLATFORM_MARGIN;
+  const totalProfit = storeProfit + platformProfit;
+
+  // 📊 평균 마진
+  const avgMargin = totalProfit / totalOrders;
+
+  // 🧮 손익분기
+  const monthlyFixed = rent + fixedCost;
+  const breakEvenMonthly = Math.ceil(monthlyFixed / avgMargin);
+  const breakEvenDaily = Math.ceil(breakEvenMonthly / 30);
+
+  document.getElementById("output").innerHTML = `
+    ▶ 가게배달 한판 순마진: ${storeMargin.toFixed(0)}원<br>
+    ▶ 플랫폼배달 한판 순마진: ${PLATFORM_MARGIN.toLocaleString()}원<br><br>
+
+    ▶ 가게배달 판수: ${storeOrders.toFixed(0)}판<br>
+    ▶ 플랫폼배달 판수: ${platformOrders.toFixed(0)}판<br><br>
+
+    ▶ <span class="highlight">평균 한판 마진: ${avgMargin.toFixed(0)}원</span><br>
+    ▶ 월 총이익: ${totalProfit.toLocaleString()}원<br><br>
+
+    ▶ 월 고정비: ${monthlyFixed.toLocaleString()}원<br>
+    ▶ 월 손익분기 판수: ${breakEvenMonthly.toLocaleString()}판<br>
+    ▶ 일 평균 필요 판수: ${breakEvenDaily}판
+  `;
+}
+
+// DOM 캐싱
+const totalOrdersEl = document.getElementById("totalOrders");
+const storeRatioEl = document.getElementById("storeRatio");
+const distanceEl = document.getElementById("distance");
+const hardFeeEl = document.getElementById("hardFee");
+const rentEl = document.getElementById("rent");
+const fixedCostEl = document.getElementById("fixedCost");
+</script>
+
+</body>
+</html>
